@@ -1,0 +1,28 @@
+# Build output
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# User and IDE files
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+*.sln.docstates
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# Test output
+TestResults/
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
