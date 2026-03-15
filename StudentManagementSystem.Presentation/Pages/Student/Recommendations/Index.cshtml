@@ -1,0 +1,102 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.Student.Recommendations.IndexModel
+@{
+    ViewData["Title"] = "Study Recommendation";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>Study Recommendation</h1>
+        <p>Generate and review a rule-based study plan from GPA, failed subjects, prerequisites and the subjects opening in the selected semester.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <select asp-for="SemesterId" class="form-select filter-w-md">
+            @foreach (var semester in Model.Semesters)
+            {
+                <option value="@semester.SemesterId">@semester.SemesterCode - @semester.SemesterName</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Load</button>
+    </form>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post" asp-page-handler="Generate" class="mb-4">
+            <input type="hidden" name="semesterId" value="@Model.SemesterId" />
+            <button type="submit" class="btn btn-primary">Generate Recommendation</button>
+        </form>
+
+        @if (Model.Recommendation is null)
+        {
+            <div class="empty-state-panel">
+                <h2 class="h5">No recommendation yet for @(Model.SelectedSemester?.SemesterCode ?? "this semester")</h2>
+                <p class="text-muted mb-0">Use the button above to generate a rule-based study plan from GPA, failed subjects, prerequisites and the current semester offerings.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 h-100">
+                        <div class="text-muted small text-uppercase fw-semibold">Risk Level</div>
+                        <div class="h4 mb-0 mt-2">@Model.Recommendation.RiskLevel</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 h-100">
+                        <div class="text-muted small text-uppercase fw-semibold">Recommended Credits</div>
+                        <div class="h4 mb-0 mt-2">@Model.Recommendation.RecommendedCredits</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="border rounded-3 p-3 h-100">
+                        <div class="text-muted small text-uppercase fw-semibold">Updated</div>
+                        <div class="h4 mb-0 mt-2">@Model.Recommendation.GeneratedAt.ToLocalTime().ToString("dd/MM")</div>
+                        <div class="text-muted small mt-2">@Model.SelectedSemester?.SemesterCode</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h2 class="h5">Summary</h2>
+                <p class="mb-2">@Model.Recommendation.Summary</p>
+                <div class="small text-muted">Current engine: rule-based recommendation. It is not a machine learning model.</div>
+            </div>
+
+            <div class="mt-4">
+                <h2 class="h5">Recommended Subjects</h2>
+                @if (Model.RecommendedSubjects.Count == 0)
+                {
+                    <p class="mb-0 text-muted">No specific subject list available.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var subject in Model.RecommendedSubjects)
+                        {
+                            <span class="badge bg-primary-subtle text-primary px-3 py-2">@subject</span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="mt-4">
+                <h2 class="h5">Avoid / Warning</h2>
+                @if (Model.AvoidSubjects.Count == 0)
+                {
+                    <p class="mb-0 text-muted">@Model.Recommendation.AvoidSubjects</p>
+                }
+                else
+                {
+                    <ul class="mb-0">
+                        @foreach (var item in Model.AvoidSubjects)
+                        {
+                            <li>@item</li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+    </div>
+</div>

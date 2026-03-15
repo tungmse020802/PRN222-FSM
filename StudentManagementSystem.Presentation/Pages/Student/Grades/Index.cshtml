@@ -1,0 +1,97 @@
+@page
+@using StudentManagementSystem.Shared.Enums
+@model StudentManagementSystem.Presentation.Pages.Student.Grades.IndexModel
+@{
+    ViewData["Title"] = "My Grades";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>My Grades</h1>
+        <p>Review scores, status and GPA for each semester.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <select asp-for="SemesterId" class="form-select filter-w-sm">
+            <option value="">All semesters</option>
+            @foreach (var semester in Model.Semesters)
+            {
+                <option value="@semester.SemesterId">@semester.SemesterCode - @semester.SemesterName</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-semibold">Semester GPA</div>
+                <div class="display-6 fw-semibold">@Model.SemesterGpa</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small text-uppercase fw-semibold">Cumulative GPA</div>
+                <div class="display-6 fw-semibold">@Model.CumulativeGpa</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Section</th>
+                        <th>Assignment</th>
+                        <th>Quiz</th>
+                        <th>Midterm</th>
+                        <th>Final</th>
+                        <th>Total</th>
+                        <th>Letter</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var enrollment in Model.Enrollments)
+                {
+                    <tr>
+                        <td>@enrollment.CourseSection?.Subject?.SubjectCode - @enrollment.CourseSection?.Subject?.SubjectName</td>
+                        <td class="fw-semibold">@enrollment.CourseSection?.SectionCode - @enrollment.CourseSection?.SectionName</td>
+                        <td>@enrollment.GradeRecord?.AssignmentScore</td>
+                        <td>@enrollment.GradeRecord?.QuizScore</td>
+                        <td>@enrollment.GradeRecord?.MidtermScore</td>
+                        <td>@enrollment.GradeRecord?.FinalScore</td>
+                        <td>@enrollment.GradeRecord?.TotalScore</td>
+                        <td>@enrollment.GradeRecord?.LetterGrade</td>
+                        <td>
+                            @if (enrollment.Status == EnrollmentStatus.Cancelled)
+                            {
+                                <span class="badge bg-secondary-subtle text-secondary">Cancelled</span>
+                            }
+                            else if (enrollment.GradeRecord?.IsPassed == true)
+                            {
+                                <span class="badge bg-success-subtle text-success">Passed</span>
+                            }
+                            else if (enrollment.GradeRecord is not null)
+                            {
+                                <span class="badge bg-danger-subtle text-danger">Failed</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark">In progress</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

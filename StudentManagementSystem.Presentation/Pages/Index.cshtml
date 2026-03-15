@@ -1,0 +1,47 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.IndexModel
+@{
+    ViewData["Title"] = "Student Management System";
+}
+
+<div class="row g-3 py-3">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100 home-panel">
+            <div class="card-body p-4">
+                <p class="home-kicker mb-2">Student Management System</p>
+                <h1 class="home-title">Quan ly sinh vien, dang ky hoc phan, diem so va study recommendation trong mot he thong gon gang.</h1>
+                <p class="home-copy mt-3">
+                    He thong ho tro 3 vai tro: Admin, Lecturer va Student. Chuc nang chinh gom quan ly ho so sinh vien, mon hoc, hoc ky,
+                    lop hoc phan, lich hoc, nhap diem, thong bao hoc vu va goi y lo trinh hoc tap theo GPA.
+                </p>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-page="/Auth/Login" class="btn btn-primary">Dang nhap</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Tai khoan mau</h2>
+                <div class="small compact-list">
+                    <div class="mb-2"><strong>Admin:</strong> admin@StudentManagementSystem.org / @@abc123@@</div>
+                    <div class="mb-2"><strong>Lecturer:</strong> lecturer1@student.local / 123456</div>
+                    <div><strong>Student:</strong> student1@student.local / 123456</div>
+                </div>
+
+                <hr />
+
+                <h2 class="h5 mb-3">Module</h2>
+                <ul class="mb-0 compact-list">
+                    <li>Quan ly sinh vien</li>
+                    <li>Quan ly mon hoc, hoc ky, lop hoc phan</li>
+                    <li>Dang ky mon hoc va kiem tra rang buoc</li>
+                    <li>Nhap diem va tinh GPA</li>
+                    <li>Thong bao hoc vu</li>
+                    <li>Study recommendation cho ky hoc tiep theo</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,73 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.Student.Schedule.IndexModel
+@{
+    ViewData["Title"] = "Study Schedule";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>My Schedule</h1>
+        <p>View your weekly timetable in grid form and filter by week, day and session.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <select asp-for="SemesterId" class="form-select filter-w-sm">
+            <option value="">All semesters</option>
+            @foreach (var semester in Model.Semesters)
+            {
+                <option value="@semester.SemesterId">@semester.SemesterCode - @semester.SemesterName</option>
+            }
+        </select>
+        <input asp-for="WeekDate" type="date" class="form-control filter-w-sm" />
+        <select asp-for="DayFilter" class="form-select filter-w-xs">
+            <option value="">All days</option>
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+        </select>
+        <select asp-for="SessionSlotFilter" class="form-select filter-w-xs">
+            <option value="">All sessions</option>
+            @for (var slot = 1; slot <= 6; slot++)
+            {
+                <option value="@slot">Slot @slot</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </form>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <span class="stat-label">Visible Sessions</span>
+            <span class="stat-value">@(Model.Timetable?.VisibleSlots.Count ?? 0)</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <span class="stat-label">Selected Semester</span>
+            <span class="stat-value fs-3">@(Model.SelectedSemester?.SemesterCode ?? "All")</span>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card h-100">
+            <span class="stat-label">Focus Week</span>
+            <span class="stat-value fs-3">@(Model.Timetable?.WeekLabel ?? "--")</span>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        @if (Model.Timetable is null)
+        {
+            <p class="text-muted mb-0">No schedule data available.</p>
+        }
+        else
+        {
+            <partial name="_TimetableGrid" model="Model.Timetable" />
+        }
+    </div>
+</div>

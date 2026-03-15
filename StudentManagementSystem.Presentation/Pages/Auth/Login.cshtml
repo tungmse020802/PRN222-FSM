@@ -1,0 +1,45 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.Auth.LoginModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="auth-shell">
+    <div class="auth-card card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+            <div class="mb-4">
+                <p class="eyebrow mb-2">Student Management System</p>
+                <h1 class="h3 mb-2">Sign in</h1>
+                <p class="text-muted mb-0">Admin uses <code>appsettings.json</code>. Lecturer and Student use database accounts.</p>
+            </div>
+
+            <form method="post" novalidate>
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label"></label>
+                    <input asp-for="Input.Email" class="form-control form-control-lg" />
+                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Input.Password" class="form-label"></label>
+                    <input asp-for="Input.Password" class="form-control form-control-lg" />
+                    <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100">Login</button>
+            </form>
+
+            <div class="demo-note mt-4">
+                <div>Admin: <code>admin@StudentManagementSystem.org</code> / <code>&#64;&#64;abc123&#64;&#64;</code></div>
+                <div>Lecturer: <code>lecturer1@student.local</code> / <code>123456</code></div>
+                <div>Student: <code>student1@student.local</code> / <code>123456</code></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

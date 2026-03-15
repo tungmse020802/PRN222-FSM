@@ -1,0 +1,65 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.Lecturer.Sections.IndexModel
+@{
+    ViewData["Title"] = "My Sections";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>My Teaching Sections</h1>
+        <p>View assigned course sections and jump to gradebook or notifications.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <select asp-for="SemesterId" class="form-select filter-w-sm">
+            <option value="">All semesters</option>
+            @foreach (var semester in Model.Semesters)
+            {
+                <option value="@semester.SemesterId">@semester.SemesterCode - @semester.SemesterName</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Filter</button>
+    </form>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Section</th>
+                        <th>Class Name</th>
+                        <th>Subject</th>
+                        <th>Semester</th>
+                        <th>Capacity</th>
+                        <th>Schedule</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var courseSection in Model.Sections)
+                {
+                    <tr>
+                        <td class="fw-semibold">@courseSection.SectionCode</td>
+                        <td>@courseSection.SectionName</td>
+                        <td>@courseSection.Subject?.SubjectCode - @courseSection.Subject?.SubjectName</td>
+                        <td>@courseSection.Semester?.SemesterCode</td>
+                        <td>@courseSection.CurrentCapacity / @courseSection.MaxCapacity</td>
+                        <td>
+                            @(courseSection.ScheduleSlots.Count == 0
+                                ? "No schedule"
+                                : string.Join(", ", courseSection.ScheduleSlots.Select(x => $"{x.DayOfWeek} Slot {x.SessionSlot}")))
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-2">
+                                <a asp-page="/Lecturer/Grades/Index" asp-route-courseSectionId="@courseSection.CourseSectionId" class="btn btn-sm btn-outline-primary">Gradebook</a>
+                                <a asp-page="/Lecturer/Notifications/Index" asp-route-courseSectionId="@courseSection.CourseSectionId" class="btn btn-sm btn-outline-dark">Notify</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

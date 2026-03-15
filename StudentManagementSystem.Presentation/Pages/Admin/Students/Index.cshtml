@@ -1,0 +1,164 @@
+@page
+@using StudentManagementSystem.Shared.Enums
+@model StudentManagementSystem.Presentation.Pages.Admin.Students.IndexModel
+@{
+    ViewData["Title"] = "Manage Students";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>Student Management</h1>
+        <p>Create, update, search and activate or deactivate student accounts.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <input asp-for="SearchTerm" class="form-control filter-search" placeholder="Search by code, name, email or major" />
+        <button type="submit" class="btn btn-outline-primary">Search</button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">Reset</a>
+    </form>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h2 class="h5 mb-3">@(Model.EditId.HasValue ? "Update Student" : "Create Student")</h2>
+                <form method="post" asp-page-handler="@(Model.EditId.HasValue ? "Update" : "Create")">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                    <input asp-for="Input.StudentId" type="hidden" />
+
+                    <div class="mb-3">
+                        <label asp-for="Input.FullName" class="form-label"></label>
+                        <input asp-for="Input.FullName" class="form-control" />
+                        <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.StudentCode" class="form-label"></label>
+                        <input asp-for="Input.StudentCode" class="form-control" />
+                        <span asp-validation-for="Input.StudentCode" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.DateOfBirth" class="form-label"></label>
+                            <input asp-for="Input.DateOfBirth" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Gender" class="form-label"></label>
+                            <select asp-for="Input.Gender" class="form-select" asp-items="Html.GetEnumSelectList<Gender>()"></select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.PhoneNumber" class="form-label"></label>
+                            <input asp-for="Input.PhoneNumber" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.Cohort" class="form-label"></label>
+                            <input asp-for="Input.Cohort" class="form-control" />
+                            <span asp-validation-for="Input.Cohort" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label asp-for="Input.Address" class="form-label"></label>
+                        <input asp-for="Input.Address" class="form-control" />
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Input.Major" class="form-label"></label>
+                            <input asp-for="Input.Major" class="form-control" />
+                            <span asp-validation-for="Input.Major" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Input.AcademicStatus" class="form-label"></label>
+                            <select asp-for="Input.AcademicStatus" class="form-select" asp-items="Html.GetEnumSelectList<AcademicStatus>()"></select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label asp-for="Input.Password" class="form-label"></label>
+                        <input asp-for="Input.Password" class="form-control" />
+                        <div class="form-text">@(Model.EditId.HasValue ? "Leave blank to keep current password." : "Required for new student.")</div>
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input asp-for="Input.IsActive" class="form-check-input" />
+                        <label asp-for="Input.IsActive" class="form-check-label"></label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">@(Model.EditId.HasValue ? "Save changes" : "Create student")</button>
+                        @if (Model.EditId.HasValue)
+                        {
+                            <a asp-page="./Index" asp-route-searchTerm="@Model.SearchTerm" class="btn btn-outline-secondary">Cancel</a>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Major</th>
+                                <th>Cohort</th>
+                                <th>Status</th>
+                                <th>Active</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var student in Model.Students)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@student.StudentCode</td>
+                                <td>@student.UserAccount?.FullName</td>
+                                <td>@student.UserAccount?.Email</td>
+                                <td>@student.Major</td>
+                                <td>@student.Cohort</td>
+                                <td>@student.AcademicStatus</td>
+                                <td>
+                                    <span class="badge @(student.IsActive ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary")">
+                                        @(student.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <a asp-page="./Index" asp-route-editId="@student.StudentId" asp-route-searchTerm="@Model.SearchTerm" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <form method="post" asp-page-handler="Toggle">
+                                            <input type="hidden" name="studentId" value="@student.StudentId" />
+                                            <input type="hidden" name="isActive" value="@(!student.IsActive)" />
+                                            <button type="submit" class="btn btn-sm btn-outline-dark">@(student.IsActive ? "Disable" : "Enable")</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

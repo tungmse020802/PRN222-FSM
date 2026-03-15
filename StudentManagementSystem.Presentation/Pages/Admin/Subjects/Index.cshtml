@@ -1,0 +1,140 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model StudentManagementSystem.Presentation.Pages.Admin.Subjects.IndexModel
+@{
+    ViewData["Title"] = "Manage Subjects";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>Subject Management</h1>
+        <p>Manage subjects, credits and prerequisite relationships.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <input asp-for="SearchTerm" class="form-control filter-search" placeholder="Search by code or subject name" />
+        <button type="submit" class="btn btn-outline-primary">Search</button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">Reset</a>
+    </form>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h2 class="h5 mb-3">@(Model.EditId.HasValue ? "Update Subject" : "Create Subject")</h2>
+                <form method="post" asp-page-handler="@(Model.EditId.HasValue ? "Update" : "Create")">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                    <input asp-for="Input.SubjectId" type="hidden" />
+
+                    <div class="mb-3">
+                        <label asp-for="Input.SubjectCode" class="form-label"></label>
+                        <input asp-for="Input.SubjectCode" class="form-control" />
+                        <span asp-validation-for="Input.SubjectCode" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.SubjectName" class="form-label"></label>
+                        <input asp-for="Input.SubjectName" class="form-control" />
+                        <span asp-validation-for="Input.SubjectName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label asp-for="Input.Credits" class="form-label"></label>
+                            <input asp-for="Input.Credits" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Input.TheoryHours" class="form-label"></label>
+                            <input asp-for="Input.TheoryHours" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Input.PracticeHours" class="form-label"></label>
+                            <input asp-for="Input.PracticeHours" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mt-3 mb-3">
+                        <label asp-for="Input.PrerequisiteIds" class="form-label">Prerequisites</label>
+                        <select asp-for="Input.PrerequisiteIds"
+                                class="form-select"
+                                multiple
+                                size="7"
+                                asp-items="@(new MultiSelectList(Model.PrerequisiteOptions.Where(x => x.SubjectId != Model.Input.SubjectId), nameof(StudentManagementSystem.Shared.Entities.Subject.SubjectId), nameof(StudentManagementSystem.Shared.Entities.Subject.SubjectName), Model.Input.PrerequisiteIds))">
+                        </select>
+                        <div class="form-text">Use Ctrl/Cmd to select multiple prerequisite subjects.</div>
+                    </div>
+
+                    <div class="form-check form-switch mb-4">
+                        <input asp-for="Input.IsActive" class="form-check-input" />
+                        <label asp-for="Input.IsActive" class="form-check-label"></label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">@(Model.EditId.HasValue ? "Save changes" : "Create subject")</button>
+                        @if (Model.EditId.HasValue)
+                        {
+                            <a asp-page="./Index" asp-route-searchTerm="@Model.SearchTerm" class="btn btn-outline-secondary">Cancel</a>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Credits</th>
+                                <th>Hours</th>
+                                <th>Prerequisites</th>
+                                <th>Active</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var subject in Model.Subjects)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@subject.SubjectCode</td>
+                                <td>@subject.SubjectName</td>
+                                <td>@subject.Credits</td>
+                                <td>@subject.TheoryHours LT / @subject.PracticeHours TH</td>
+                                <td>
+                                    @(subject.PrerequisiteLinks.Count == 0
+                                        ? "None"
+                                        : string.Join(", ", subject.PrerequisiteLinks.Select(x => x.PrerequisiteSubject?.SubjectCode)))
+                                </td>
+                                <td>
+                                    <span class="badge @(subject.IsActive ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary")">
+                                        @(subject.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <a asp-page="./Index" asp-route-editId="@subject.SubjectId" asp-route-searchTerm="@Model.SearchTerm" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        <form method="post" asp-page-handler="Toggle">
+                                            <input type="hidden" name="subjectId" value="@subject.SubjectId" />
+                                            <input type="hidden" name="isActive" value="@(!subject.IsActive)" />
+                                            <button type="submit" class="btn btn-sm btn-outline-dark">@(subject.IsActive ? "Disable" : "Enable")</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

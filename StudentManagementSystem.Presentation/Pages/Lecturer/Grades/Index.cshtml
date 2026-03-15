@@ -1,0 +1,238 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.Lecturer.Grades.IndexModel
+@{
+    ViewData["Title"] = "Grade Management";
+}
+
+<div class="page-toolbar">
+    <div class="page-intro">
+        <h1>Grade Management</h1>
+        <p>Enter and update scores with quick search, live preview and section context.</p>
+    </div>
+    <form method="get" class="filter-bar">
+        <select asp-for="CourseSectionId" class="form-select filter-w-lg">
+            @foreach (var courseSection in Model.Sections)
+            {
+                <option value="@courseSection.CourseSectionId">@courseSection.SectionCode - @courseSection.SectionName</option>
+            }
+        </select>
+        <input asp-for="SearchTerm" class="form-control filter-search" placeholder="Search student code, name or email" />
+        <button type="submit" class="btn btn-outline-primary">Load</button>
+        <a asp-page="/Lecturer/Sections/Index" class="btn btn-outline-dark">My Sections</a>
+    </form>
+</div>
+
+@if (!Model.CourseSectionId.HasValue)
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <p class="text-muted mb-0">No course section assigned.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between flex-wrap gap-3">
+                        <div>
+                            <div class="text-muted small text-uppercase fw-semibold">Selected Section</div>
+                            <h2 class="h5 mb-1 mt-2">@Model.SelectedSection?.SectionCode - @Model.SelectedSection?.SectionName</h2>
+                            <div class="text-muted">@Model.SelectedSection?.Subject?.SubjectName</div>
+                        </div>
+                        <div class="text-muted small">
+                            <div>Semester: @Model.SelectedSection?.Semester?.SemesterCode</div>
+                            <div>Capacity: @Model.SelectedSection?.CurrentCapacity / @Model.SelectedSection?.MaxCapacity</div>
+                            <div>
+                                Schedule:
+                                @(Model.SelectedSection?.ScheduleSlots.Count > 0
+                                    ? string.Join(", ", Model.SelectedSection!.ScheduleSlots.Select(x => $"{x.DayOfWeek} Slot {x.SessionSlot}"))
+                                    : "No schedule")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Students</span>
+                    <span class="stat-value">@Model.TotalStudents</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Graded</span>
+                    <span class="stat-value">@Model.GradedStudents</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Average Total</span>
+                    <span class="stat-value">@Model.AverageTotalScore.ToString("0.00")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="small text-muted">
+                    Showing @Model.GradeBook.Count student(s)
+                    @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                    {
+                        <span>for keyword "@Model.SearchTerm"</span>
+                    }
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-success-subtle text-success">Passed: @Model.PassedStudents</span>
+                    <span class="badge bg-danger-subtle text-danger">Need attention: @Model.AtRiskStudents</span>
+                </div>
+            </div>
+
+            @if (Model.GradeBook.Count == 0)
+            {
+                <p class="text-muted mb-0">No students match the current filter.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table grade-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 220px;">Student</th>
+                                <th style="min-width: 360px;">Scores</th>
+                                <th style="min-width: 160px;">Preview</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var enrollment in Model.GradeBook)
+                        {
+                            var formId = $"grade-form-{enrollment.EnrollmentId}";
+                            var assignment = enrollment.GradeRecord?.AssignmentScore ?? 0m;
+                            var quiz = enrollment.GradeRecord?.QuizScore ?? 0m;
+                            var midterm = enrollment.GradeRecord?.MidtermScore ?? 0m;
+                            var final = enrollment.GradeRecord?.FinalScore ?? 0m;
+                            var hasExistingGrade = enrollment.GradeRecord is not null;
+                            <tr class="grade-row" data-grade-row>
+                                <td>
+                                    <div class="fw-semibold">@enrollment.Student?.UserAccount?.FullName</div>
+                                    <div class="text-muted small">@enrollment.Student?.StudentCode</div>
+                                    <div class="text-muted small">@enrollment.Student?.UserAccount?.Email</div>
+                                </td>
+                                <td>
+                                    <div class="score-grid">
+                                        <label class="score-input">
+                                            <span>Assignment 20%</span>
+                                            <input type="number" step="0.01" min="0" max="10" name="assignmentScore" value="@enrollment.GradeRecord?.AssignmentScore" class="form-control" form="@formId" data-score-role="assignment" />
+                                        </label>
+                                        <label class="score-input">
+                                            <span>Quiz 10%</span>
+                                            <input type="number" step="0.01" min="0" max="10" name="quizScore" value="@enrollment.GradeRecord?.QuizScore" class="form-control" form="@formId" data-score-role="quiz" />
+                                        </label>
+                                        <label class="score-input">
+                                            <span>Midterm 20%</span>
+                                            <input type="number" step="0.01" min="0" max="10" name="midtermScore" value="@enrollment.GradeRecord?.MidtermScore" class="form-control" form="@formId" data-score-role="midterm" />
+                                        </label>
+                                        <label class="score-input">
+                                            <span>Final 50%</span>
+                                            <input type="number" step="0.01" min="0" max="10" name="finalScore" value="@enrollment.GradeRecord?.FinalScore" class="form-control" form="@formId" data-score-role="final" />
+                                        </label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="preview-card">
+                                        <div class="fw-semibold" data-grade-total>@(hasExistingGrade ? enrollment.GradeRecord!.TotalScore.ToString("0.00") : "--")</div>
+                                        <div class="small text-muted">Predicted total</div>
+                                        <div class="mt-2">
+                                            <span class="badge bg-secondary-subtle text-secondary" data-grade-letter>@(hasExistingGrade ? enrollment.GradeRecord!.LetterGrade : "N/A")</span>
+                                            <span class="badge @(enrollment.GradeRecord?.IsPassed == true ? "bg-success-subtle text-success" : enrollment.GradeRecord is not null ? "bg-danger-subtle text-danger" : "bg-light text-dark")" data-grade-status>
+                                                @(enrollment.GradeRecord?.IsPassed == true ? "Passed" : enrollment.GradeRecord is not null ? "Failed" : "Not graded")
+                                            </span>
+                                        </div>
+                                        <div class="small text-muted mt-2">
+                                            Updated:
+                                            @(enrollment.GradeRecord?.UpdatedAt.ToLocalTime().ToString("dd/MM HH:mm") ?? "--")
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <form id="@formId" method="post" asp-page-handler="Save">
+                                        <input type="hidden" name="courseSectionId" value="@enrollment.CourseSectionId" />
+                                        <input type="hidden" name="studentId" value="@enrollment.StudentId" />
+                                        <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+                                        <button type="submit" class="btn btn-primary">Save Score</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const calculate = (row) => {
+                const getInput = (role) => row.querySelector(`[data-score-role="${role}"]`);
+                const getRawValue = (role) => getInput(role)?.value?.trim() ?? "";
+                const getValue = (role) => Number.parseFloat(getRawValue(role)) || 0;
+                const isEmpty = ["assignment", "quiz", "midterm", "final"].every((role) => getRawValue(role) === "");
+
+                if (isEmpty) {
+                    row.querySelector("[data-grade-total]").textContent = "--";
+                    row.querySelector("[data-grade-letter]").textContent = "N/A";
+
+                    const emptyStatusEl = row.querySelector("[data-grade-status]");
+                    emptyStatusEl.textContent = "Not graded";
+                    emptyStatusEl.className = "badge bg-light text-dark";
+                    return;
+                }
+
+                const total = (getValue("assignment") * 0.2) + (getValue("quiz") * 0.1) + (getValue("midterm") * 0.2) + (getValue("final") * 0.5);
+                const rounded = Math.round(total * 100) / 100;
+
+                let letter = "F";
+                let status = "Failed";
+                let statusClass = "bg-danger-subtle text-danger";
+
+                if (rounded >= 8.5) {
+                    letter = "A";
+                    status = "Passed";
+                    statusClass = "bg-success-subtle text-success";
+                } else if (rounded >= 7.0) {
+                    letter = "B";
+                    status = "Passed";
+                    statusClass = "bg-success-subtle text-success";
+                } else if (rounded >= 5.5) {
+                    letter = "C";
+                    status = "Passed";
+                    statusClass = "bg-success-subtle text-success";
+                } else if (rounded >= 4.0) {
+                    letter = "D";
+                    status = "Passed";
+                    statusClass = "bg-success-subtle text-success";
+                }
+
+                row.querySelector("[data-grade-total]").textContent = rounded.toFixed(2);
+                row.querySelector("[data-grade-letter]").textContent = letter;
+
+                const statusEl = row.querySelector("[data-grade-status]");
+                statusEl.textContent = status;
+                statusEl.className = `badge ${statusClass}`;
+            };
+
+            document.querySelectorAll("[data-grade-row]").forEach((row) => {
+                row.querySelectorAll("[data-score-role]").forEach((input) => {
+                    input.addEventListener("input", () => calculate(row));
+                });
+                calculate(row);
+            });
+        })();
+    </script>
+}

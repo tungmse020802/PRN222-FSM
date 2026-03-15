@@ -1,0 +1,41 @@
+@page
+@model StudentManagementSystem.Presentation.Pages.Student.Profile.IndexModel
+@{
+    ViewData["Title"] = "Student Profile";
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <div class="page-toolbar">
+            <div class="page-intro">
+                <h1>My Profile</h1>
+                <p>Personal information and current academic status.</p>
+            </div>
+        </div>
+
+        @if (Model.Profile?.UserAccount is null)
+        {
+            <p class="text-muted mb-0">Student profile was not found.</p>
+        }
+        else
+        {
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div><span class="text-muted">Student code:</span> <strong>@Model.Profile.StudentCode</strong></div>
+                    <div class="mt-2"><span class="text-muted">Full name:</span> <strong>@Model.Profile.UserAccount.FullName</strong></div>
+                    <div class="mt-2"><span class="text-muted">Email:</span> @Model.Profile.UserAccount.Email</div>
+                    <div class="mt-2"><span class="text-muted">Phone:</span> @(Model.Profile.PhoneNumber ?? "N/A")</div>
+                    <div class="mt-2"><span class="text-muted">Address:</span> @(Model.Profile.Address ?? "N/A")</div>
+                </div>
+                <div class="col-md-6">
+                    <div><span class="text-muted">Major:</span> <strong>@Model.Profile.Major</strong></div>
+                    <div class="mt-2"><span class="text-muted">Cohort:</span> @Model.Profile.Cohort</div>
+                    <div class="mt-2"><span class="text-muted">Date of birth:</span> @Model.Profile.DateOfBirth.ToString("dd/MM/yyyy")</div>
+                    <div class="mt-2"><span class="text-muted">Gender:</span> @Model.Profile.Gender</div>
+                    <div class="mt-2"><span class="text-muted">Academic status:</span> @Model.Profile.AcademicStatus</div>
+                    <div class="mt-2"><span class="text-muted">Account status:</span> @(Model.Profile.IsActive ? "Active" : "Inactive")</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

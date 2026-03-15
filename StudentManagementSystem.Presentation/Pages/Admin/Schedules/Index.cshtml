@@ -1,0 +1,821 @@
+@page
+@using StudentManagementSystem.Presentation.Models
+@model StudentManagementSystem.Presentation.Pages.Admin.Schedules.IndexModel
+@{
+    ViewData["Title"] = "Manage Schedules";
+    var plannerDays = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday };
+    var plannerSlots = Enumerable.Range(1, 6).ToArray();
+    var selectedSemester = Model.SelectedSemester;
+    var semesterStart = (selectedSemester?.StartDate.Date ?? Model.Input.StartDate.Date).ToString("yyyy-MM-dd");
+    var semesterEnd = (selectedSemester?.EndDate.Date ?? Model.Input.EndDate.Date).ToString("yyyy-MM-dd");
+    var openEditorOnLoad = !ViewContext.ViewData.ModelState.IsValid || Model.EditId.HasValue;
+}
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-success mb-3">@statusMessage</div>
+}
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger mb-3">@errorMessage</div>
+}
+
+<div class="page-toolbar schedule-toolbar">
+    <div class="page-intro">
+        <h1>Teaching Timetable</h1>
+        <p>Click an empty timetable cell to place a class there. Click an existing class card to edit it in the popup without leaving the board.</p>
+    </div>
+    <form method="get" class="filter-bar schedule-filter-bar">
+        <select asp-for="SemesterFilter" class="form-select filter-w-sm">
+            <option value="">All semesters</option>
+            @foreach (var semester in Model.Semesters)
+            {
+                <option value="@semester.SemesterId">@semester.SemesterCode - @semester.SemesterName</option>
+            }
+        </select>
+        <select asp-for="CourseSectionFilter" class="form-select filter-w-lg">
+            <option value="">All course sections</option>
+            @foreach (var courseSection in Model.CourseSections)
+            {
+                <option value="@courseSection.CourseSectionId">@courseSection.SectionCode - @courseSection.SectionName</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">Apply filter</button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">Reset</a>
+    </form>
+</div>
+
+<div class="schedule-board-layout"
+     data-semester-start="@semesterStart"
+     data-semester-end="@semesterEnd">
+    <div class="card border-0 shadow-sm schedule-board-card">
+        <div class="card-body">
+            <div class="schedule-board-head">
+                <div>
+                    <div class="planner-kicker">Weekly Grid</div>
+                    <h2>Semester Schedule Board</h2>
+                    <p>Each cell represents one weekly teaching slot. Add into empty cells, or click existing cards to edit and move them.</p>
+                </div>
+                <div class="schedule-board-summary">
+                    <div class="schedule-mini-stat">
+                        <span class="schedule-mini-label">Semester</span>
+                        <span class="schedule-mini-value">@(selectedSemester?.SemesterCode ?? "All")</span>
+                    </div>
+                    <div class="schedule-mini-stat">
+                        <span class="schedule-mini-label">Classes</span>
+                        <span class="schedule-mini-value">@Model.ScheduleSlots.Count</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="schedule-board-legend">
+                <span class="schedule-board-legend-item"><span class="schedule-board-dot is-empty"></span>Empty slot</span>
+                <span class="schedule-board-legend-item"><span class="schedule-board-dot is-filled"></span>Scheduled class</span>
+                <span class="schedule-board-legend-item"><span class="schedule-board-dot is-action"></span>Click to place or edit</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table schedule-planner-table align-top">
+                    <thead>
+                        <tr>
+                            <th class="schedule-time-col">Slot</th>
+                            @foreach (var day in plannerDays)
+                            {
+                                <th>@TimetableViewModel.GetDayLabel(day)</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var slotNumber in plannerSlots)
+                        {
+                            <tr>
+                                <th class="schedule-time-col">
+                                    <div class="fw-semibold">Slot @slotNumber</div>
+                                </th>
+                                @foreach (var day in plannerDays)
+                                {
+                                    var cellSchedules = Model.ScheduleSlots
+                                        .Where(slot => slot.DayOfWeek == day && slot.SessionSlot == slotNumber)
+                                        .OrderBy(slot => slot.CourseSection!.SectionCode)
+                                        .ToList();
+
+                                    <td class="schedule-board-cell">
+                                        <button type="button"
+                                                class="schedule-add-trigger"
+                                                data-open-create="true"
+                                                data-day-value="@((int)day)"
+                                                data-day-label="@TimetableViewModel.GetDayLabel(day)"
+                                                data-slot-value="@slotNumber">
+                                            <span class="schedule-add-icon">+</span>
+                                            <span class="schedule-add-text">Place class here</span>
+                                        </button>
+
+                                        @if (cellSchedules.Count == 0)
+                                        {
+                                            <div class="schedule-board-empty">No scheduled class</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="schedule-board-stack">
+                                                @foreach (var slot in cellSchedules)
+                                                {
+                                                    <button type="button"
+                                                            class="schedule-session-card"
+                                                            data-open-edit="true"
+                                                            data-schedule-slot-id="@slot.ScheduleSlotId"
+                                                            data-course-section-id="@slot.CourseSectionId"
+                                                            data-room="@slot.Room"
+                                                            data-day-value="@((int)slot.DayOfWeek)"
+                                                            data-slot-value="@slot.SessionSlot"
+                                                            data-start-date="@slot.StartDate.ToString("yyyy-MM-dd")"
+                                                            data-end-date="@slot.EndDate.ToString("yyyy-MM-dd")">
+                                                        <span class="schedule-session-title">@slot.CourseSection?.Subject?.SubjectCode</span>
+                                                        <span class="schedule-session-text">@slot.CourseSection?.SectionCode - @slot.CourseSection?.SectionName</span>
+                                                        <span class="schedule-session-text">@slot.CourseSection?.Lecturer?.UserAccount?.FullName</span>
+                                                        <span class="schedule-session-meta">Room @slot.Room</span>
+                                                        <span class="schedule-session-meta">@slot.StartDate.ToString("dd/MM/yyyy") - @slot.EndDate.ToString("dd/MM/yyyy")</span>
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm schedule-side-panel">
+        <div class="card-body">
+            <div class="planner-kicker">How To Use</div>
+            <h2 class="h5">Quick scheduling flow</h2>
+            <div class="schedule-help-list">
+                <div class="schedule-help-item">
+                    <span class="schedule-help-number">1</span>
+                    <div>Click the weekday and slot you want to arrange.</div>
+                </div>
+                <div class="schedule-help-item">
+                    <span class="schedule-help-number">2</span>
+                    <div>In the popup, choose an available class and room from the comboboxes.</div>
+                </div>
+                <div class="schedule-help-item">
+                    <span class="schedule-help-number">3</span>
+                    <div>Adjust the teaching range, then save. Click an existing card to edit or delete it.</div>
+                </div>
+            </div>
+
+            <div class="schedule-side-summary">
+                <div class="schedule-side-summary-item">
+                    <span class="schedule-mini-label">Filtered semester</span>
+                    <span class="schedule-mini-value">@(selectedSemester?.SemesterName ?? "All semesters")</span>
+                </div>
+                <div class="schedule-side-summary-item">
+                    <span class="schedule-mini-label">Registration window</span>
+                    <span class="schedule-mini-value">
+                        @(selectedSemester is null
+                            ? "Not selected"
+                            : $"{selectedSemester.RegistrationStartDate:dd/MM} - {selectedSemester.RegistrationEndDate:dd/MM}")
+                    </span>
+                </div>
+                <div class="schedule-side-summary-item">
+                    <span class="schedule-mini-label">Known rooms</span>
+                    <span class="schedule-mini-value">
+                        @Model.ScheduleSlots.Select(slot => slot.Room).Where(room => !string.IsNullOrWhiteSpace(room)).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="scheduleEditorModal" tabindex="-1" aria-labelledby="scheduleEditorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable schedule-editor-dialog">
+        <div class="modal-content schedule-editor-content">
+            <form method="post" asp-page-handler="Save" id="scheduleEditorForm">
+                <div class="modal-header">
+                    <div>
+                        <div class="planner-kicker">Schedule Editor</div>
+                        <h2 class="h5 mb-1" id="scheduleEditorModalLabel">Create class slot</h2>
+                        <p class="text-muted mb-0">Pick the time first, then choose an available class and an available room from the comboboxes.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body schedule-editor-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                    <input asp-for="Input.ScheduleSlotId" type="hidden" id="editorScheduleSlotId" />
+                    <input type="hidden" name="SemesterFilter" value="@Model.SemesterFilter" />
+                    <input type="hidden" name="CourseSectionFilter" value="@Model.CourseSectionFilter" />
+
+                    <div class="editor-context-strip">
+                        <span class="editor-context-chip" id="editorModeChip">Create</span>
+                        <span class="editor-context-chip" id="editorDayChip">@TimetableViewModel.GetDayLabel(Model.Input.DayOfWeek)</span>
+                        <span class="editor-context-chip" id="editorSlotChip">Slot @Model.Input.SessionSlot</span>
+                        <span class="editor-context-chip" id="editorAvailabilityChip">Checking availability...</span>
+                    </div>
+
+                    <div class="editor-field-grid">
+                        <div class="editor-field editor-field-wide">
+                            <label asp-for="Input.CourseSectionId" class="form-label">Available Class / Lecturer</label>
+                            <select asp-for="Input.CourseSectionId" class="form-select" id="editorCourseSectionSelect">
+                                @foreach (var option in Model.LookupCourseSectionOptions)
+                                {
+                                    if (option.IsAvailable)
+                                    {
+                                        <option value="@option.CourseSectionId"
+                                                data-lecturer-name="@option.LecturerName"
+                                                data-subject-text="@option.SubjectText"
+                                                data-section-text="@($"{option.SectionCode} - {option.SectionName}")"
+                                                data-status-text="@option.StatusText">
+                                            @option.SectionCode - @option.SectionName - @option.LecturerName
+                                        </option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@option.CourseSectionId"
+                                                data-lecturer-name="@option.LecturerName"
+                                                data-subject-text="@option.SubjectText"
+                                                data-section-text="@($"{option.SectionCode} - {option.SectionName}")"
+                                                data-status-text="@option.StatusText"
+                                                disabled>
+                                            @option.SectionCode - @option.SectionName - @option.LecturerName
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <div class="editor-field-note" id="editorSectionNote">Select a class to see lecturer and subject details.</div>
+                        </div>
+
+                        <div class="editor-field">
+                            <label asp-for="Input.DayOfWeek" class="form-label">Weekday</label>
+                            <select asp-for="Input.DayOfWeek" class="form-select" id="editorDaySelect">
+                                @foreach (var day in plannerDays)
+                                {
+                                    <option value="@((int)day)">@TimetableViewModel.GetDayLabel(day)</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="editor-field">
+                            <label asp-for="Input.SessionSlot" class="form-label">Slot</label>
+                            <select asp-for="Input.SessionSlot" class="form-select" id="editorSlotSelect">
+                                @foreach (var slotNumber in plannerSlots)
+                                {
+                                    <option value="@slotNumber">Slot @slotNumber</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="editor-field">
+                            <label asp-for="Input.StartDate" class="form-label">Start Date</label>
+                            <input asp-for="Input.StartDate" class="form-control" id="editorStartDateInput" />
+                        </div>
+
+                        <div class="editor-field">
+                            <label asp-for="Input.EndDate" class="form-label">End Date</label>
+                            <input asp-for="Input.EndDate" class="form-control" id="editorEndDateInput" />
+                        </div>
+
+                        <div class="editor-field editor-field-wide">
+                            <label asp-for="Input.Room" class="form-label">Room</label>
+                            <input asp-for="Input.Room" type="hidden" id="editorRoomValue" />
+                            <select class="form-select" id="editorRoomSelect">
+                                @foreach (var option in Model.LookupRoomChoices.Where(option => option.IsAvailable || option.IsSelected))
+                                {
+                                    <option value="@option.Room"
+                                            data-status-text="@option.StatusText">
+                                        @option.Room
+                                    </option>
+                                }
+                                <option value="__other__">Other room...</option>
+                            </select>
+                            <div class="editor-custom-room" id="editorCustomRoomWrap" hidden>
+                                <input type="text"
+                                       class="form-control"
+                                       id="editorRoomCustomInput"
+                                       placeholder="Enter a new room code, for example BE-510" />
+                            </div>
+                            <div class="editor-field-note" id="editorRoomNote">Room list is filtered by the current day, slot and date range. Choose `Other room...` if you need a new room code.</div>
+                        </div>
+                    </div>
+
+                    <div class="editor-preview-card">
+                        <div class="editor-preview-head">
+                            <div>
+                                <h3>Current selection</h3>
+                                <p>The popup keeps only the important information: chosen class, lecturer, room and existing classes already occupying this cell.</p>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="editorRefreshButton">Refresh availability</button>
+                        </div>
+
+                        <div class="editor-preview-grid">
+                            <div class="editor-preview-item">
+                                <span class="editor-preview-label">Class</span>
+                                <span class="editor-preview-value" id="editorPreviewClass">Not selected</span>
+                            </div>
+                            <div class="editor-preview-item">
+                                <span class="editor-preview-label">Lecturer</span>
+                                <span class="editor-preview-value" id="editorPreviewLecturer">Not selected</span>
+                            </div>
+                            <div class="editor-preview-item">
+                                <span class="editor-preview-label">Subject</span>
+                                <span class="editor-preview-value" id="editorPreviewSubject">Not selected</span>
+                            </div>
+                            <div class="editor-preview-item">
+                                <span class="editor-preview-label">Room</span>
+                                <span class="editor-preview-value" id="editorPreviewRoom">Not selected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="editor-conflicts-card">
+                        <div class="editor-preview-head">
+                            <div>
+                                <h3>Classes already in this cell</h3>
+                                <p>Use this list to avoid stacking too many sessions into the same weekday and slot.</p>
+                            </div>
+                        </div>
+                        <div id="editorConflictList" class="editor-conflict-list">
+                            <div class="empty-state-panel">Availability will load when you open the popup.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer justify-content-between schedule-editor-footer">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary" id="editorSaveButton">Create session</button>
+                        <button type="submit"
+                                class="btn btn-outline-danger"
+                                id="editorDeleteButton"
+                                form="scheduleDeleteForm"
+                                hidden>
+                            Delete
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<form method="post" asp-page-handler="Delete" id="scheduleDeleteForm">
+    <input type="hidden" name="scheduleSlotId" id="deleteScheduleSlotId" />
+    <input type="hidden" name="SemesterFilter" value="@Model.SemesterFilter" />
+    <input type="hidden" name="CourseSectionFilter" value="@Model.CourseSectionFilter" />
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const modalElement = document.getElementById('scheduleEditorModal');
+            if (!modalElement || typeof bootstrap === 'undefined') {
+                return;
+            }
+
+            const editorModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const boardRoot = document.querySelector('[data-semester-start]');
+            const createButtons = document.querySelectorAll('[data-open-create]');
+            const editButtons = document.querySelectorAll('[data-open-edit]');
+            const titleElement = document.getElementById('scheduleEditorModalLabel');
+            const formElement = document.getElementById('scheduleEditorForm');
+            const scheduleSlotIdInput = document.getElementById('editorScheduleSlotId');
+            const deleteScheduleSlotIdInput = document.getElementById('deleteScheduleSlotId');
+            const deleteButton = document.getElementById('editorDeleteButton');
+            const saveButton = document.getElementById('editorSaveButton');
+            const refreshButton = document.getElementById('editorRefreshButton');
+            const courseSectionSelect = document.getElementById('editorCourseSectionSelect');
+            const daySelect = document.getElementById('editorDaySelect');
+            const slotSelect = document.getElementById('editorSlotSelect');
+            const roomValueInput = document.getElementById('editorRoomValue');
+            const roomSelect = document.getElementById('editorRoomSelect');
+            const roomCustomWrap = document.getElementById('editorCustomRoomWrap');
+            const roomCustomInput = document.getElementById('editorRoomCustomInput');
+            const startDateInput = document.getElementById('editorStartDateInput');
+            const endDateInput = document.getElementById('editorEndDateInput');
+            const modeChip = document.getElementById('editorModeChip');
+            const dayChip = document.getElementById('editorDayChip');
+            const slotChip = document.getElementById('editorSlotChip');
+            const availabilityChip = document.getElementById('editorAvailabilityChip');
+            const sectionNote = document.getElementById('editorSectionNote');
+            const roomNote = document.getElementById('editorRoomNote');
+            const previewClass = document.getElementById('editorPreviewClass');
+            const previewLecturer = document.getElementById('editorPreviewLecturer');
+            const previewSubject = document.getElementById('editorPreviewSubject');
+            const previewRoom = document.getElementById('editorPreviewRoom');
+            const conflictList = document.getElementById('editorConflictList');
+            const semesterFilterValue = '@Model.SemesterFilter';
+            const courseSectionFilterValue = '@Model.CourseSectionFilter';
+            const shouldOpenEditor = @(openEditorOnLoad ? "true" : "false");
+            const initialEditId = '@(Model.EditId?.ToString() ?? string.Empty)';
+            const customRoomStorageKey = 'sms.schedule.customRooms';
+            let roomStatusMap = new Map();
+
+            const escapeHtml = value => String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+
+            const toDateValue = date => {
+                const year = date.getFullYear();
+                const month = `${date.getMonth() + 1}`.padStart(2, '0');
+                const day = `${date.getDate()}`.padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const parseDateValue = value => {
+                const [year, month, day] = (value || '').split('-').map(Number);
+                if (!year || !month || !day) {
+                    return null;
+                }
+
+                return new Date(year, month - 1, day);
+            };
+
+            const alignDateToDay = (startValue, dayValue) => {
+                const parsed = parseDateValue(startValue);
+                if (!parsed) {
+                    return startValue;
+                }
+
+                let candidate = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                let guard = 0;
+
+                while (candidate.getDay() !== Number(dayValue) && guard < 7) {
+                    candidate.setDate(candidate.getDate() + 1);
+                    guard += 1;
+                }
+
+                return toDateValue(candidate);
+            };
+
+            const getStoredCustomRooms = () => {
+                try {
+                    const raw = window.localStorage.getItem(customRoomStorageKey);
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    return Array.isArray(parsed)
+                        ? parsed.filter(item => typeof item === 'string' && item.trim().length > 0)
+                        : [];
+                } catch {
+                    return [];
+                }
+            };
+
+            const persistCustomRoom = room => {
+                const normalized = (room || '').trim();
+                if (!normalized) {
+                    return;
+                }
+
+                const merged = [...new Set([...getStoredCustomRooms(), normalized])].sort((left, right) =>
+                    left.localeCompare(right));
+                window.localStorage.setItem(customRoomStorageKey, JSON.stringify(merged));
+            };
+
+            const syncRoomValueFromControls = ({ persist = false } = {}) => {
+                if (!roomValueInput || !roomSelect) {
+                    return;
+                }
+
+                if (roomSelect.value === '__other__') {
+                    roomCustomWrap.hidden = false;
+                    roomValueInput.value = roomCustomInput?.value?.trim() || '';
+                    if (persist && roomValueInput.value) {
+                        persistCustomRoom(roomValueInput.value);
+                    }
+                    return;
+                }
+
+                roomCustomWrap.hidden = true;
+                roomValueInput.value = roomSelect.value || '';
+            };
+
+            const updateHeaderChips = () => {
+                const dayText = daySelect?.selectedOptions?.[0]?.textContent?.trim() || 'No day';
+                const slotText = slotSelect?.selectedOptions?.[0]?.textContent?.trim() || 'No slot';
+                dayChip.textContent = dayText;
+                slotChip.textContent = slotText;
+            };
+
+            const updatePreview = () => {
+                const selectedSection = courseSectionSelect?.selectedOptions?.[0];
+                const roomValue = roomValueInput?.value?.trim() || '';
+
+                previewClass.textContent = selectedSection?.dataset.sectionText || 'Not selected';
+                previewLecturer.textContent = selectedSection?.dataset.lecturerName || 'Not selected';
+                previewSubject.textContent = selectedSection?.dataset.subjectText || 'Not selected';
+                previewRoom.textContent = roomValue || 'Not selected';
+
+                sectionNote.textContent = selectedSection?.dataset.statusText || 'Select a class to see lecturer and subject details.';
+                roomNote.textContent = roomStatusMap.get(roomValue)
+                    || (roomSelect?.value === '__other__'
+                        ? 'This custom room will be saved for reuse after you save the schedule slot.'
+                        : 'Choose an available room or switch to `Other room...` to type a new code.');
+                updateHeaderChips();
+            };
+
+            const renderSectionOptions = (options, preferredValue) => {
+                const currentValue = preferredValue || courseSectionSelect?.value || '';
+                const normalizedValue = String(currentValue);
+
+                courseSectionSelect.innerHTML = options.map(option => `
+                    <option value="${option.courseSectionId}"
+                            data-lecturer-name="${escapeHtml(option.lecturerName)}"
+                            data-subject-text="${escapeHtml(option.subjectText)}"
+                            data-section-text="${escapeHtml(`${option.sectionCode} - ${option.sectionName}`)}"
+                            data-status-text="${escapeHtml(option.statusText)}"
+                            ${option.isAvailable || String(option.courseSectionId) === normalizedValue ? '' : 'disabled'}>
+                        ${escapeHtml(`${option.sectionCode} - ${option.sectionName} - ${option.lecturerName}${option.isAvailable ? '' : ' [Busy]'}`)}
+                    </option>
+                `).join('');
+
+                if ([...courseSectionSelect.options].some(option => option.value === normalizedValue)) {
+                    courseSectionSelect.value = normalizedValue;
+                } else {
+                    const firstEnabled = [...courseSectionSelect.options].find(option => !option.disabled);
+                    if (firstEnabled) {
+                        courseSectionSelect.value = firstEnabled.value;
+                    }
+                }
+            };
+
+            const renderRoomOptions = (options, preferredValue) => {
+                const currentValue = (preferredValue || roomValueInput?.value || '').trim();
+                const normalizedValue = String(currentValue);
+                roomStatusMap = new Map();
+                const storedCustomRooms = getStoredCustomRooms();
+                const optionMap = new Map();
+                const knownServerRooms = new Set((options || []).map(option => option.room));
+
+                (options || []).forEach(option => {
+                    if (option.isAvailable || option.isSelected) {
+                        optionMap.set(option.room, option);
+                    }
+                });
+
+                storedCustomRooms.forEach(room => {
+                    if (!knownServerRooms.has(room) && !optionMap.has(room)) {
+                        optionMap.set(room, {
+                            room,
+                            isAvailable: true,
+                            isSelected: room === normalizedValue,
+                            statusText: 'Saved custom room. Check the current slot and date range before saving.'
+                        });
+                    }
+                });
+
+                const renderableOptions = [...optionMap.values()].sort((left, right) => left.room.localeCompare(right.room));
+                renderableOptions.forEach(option => {
+                    roomStatusMap.set(option.room, option.statusText);
+                });
+
+                roomSelect.innerHTML = `
+                    ${renderableOptions.map(option => `
+                        <option value="${escapeHtml(option.room)}"
+                                data-status-text="${escapeHtml(option.statusText)}">
+                            ${escapeHtml(option.room)}
+                        </option>
+                    `).join('')}
+                    <option value="__other__">Other room...</option>
+                `;
+
+                if (normalizedValue && renderableOptions.some(option => option.room === normalizedValue)) {
+                    roomSelect.value = normalizedValue;
+                    roomCustomInput.value = '';
+                } else if (normalizedValue) {
+                    roomSelect.value = '__other__';
+                    roomCustomInput.value = normalizedValue;
+                } else if (renderableOptions.length > 0) {
+                    roomSelect.value = renderableOptions[0].room;
+                    roomCustomInput.value = '';
+                } else {
+                    roomSelect.value = '__other__';
+                    roomCustomInput.value = '';
+                }
+
+                syncRoomValueFromControls();
+            };
+
+            const renderConflictList = conflicts => {
+                if (!conflicts.length) {
+                    conflictList.innerHTML = '<div class="empty-state-panel">This weekday and slot is currently empty.</div>';
+                    return;
+                }
+
+                conflictList.innerHTML = conflicts.map(item => `
+                    <div class="editor-conflict-item">
+                        <div class="editor-conflict-title">${escapeHtml(item.sectionCode)} - ${escapeHtml(item.sectionName)}</div>
+                        <div class="editor-conflict-text">${escapeHtml(item.lecturerName)}</div>
+                        <div class="editor-conflict-text">${escapeHtml(item.dayLabel)} / ${escapeHtml(item.sessionSlotLabel)}</div>
+                        <div class="editor-conflict-text">Room ${escapeHtml(item.room)}</div>
+                        <div class="editor-conflict-text">${escapeHtml(item.dateRangeText)}</div>
+                    </div>
+                `).join('');
+            };
+
+            const buildLookupUrl = () => {
+                const params = new URLSearchParams();
+                params.set('handler', 'Lookup');
+                params.set('LookupTarget', 'room');
+
+                if (semesterFilterValue) {
+                    params.set('SemesterFilter', semesterFilterValue);
+                }
+
+                if (courseSectionFilterValue) {
+                    params.set('CourseSectionFilter', courseSectionFilterValue);
+                }
+
+                if (scheduleSlotIdInput.value) {
+                    params.set('EditId', scheduleSlotIdInput.value);
+                }
+
+                if (courseSectionSelect.value) {
+                    params.set('InputCourseSectionId', courseSectionSelect.value);
+                }
+
+                if (daySelect.value) {
+                    params.set('InputDayOfWeekValue', daySelect.value);
+                }
+
+                if (slotSelect.value) {
+                    params.set('InputSessionSlotValue', slotSelect.value);
+                }
+
+                params.set('InputRoomValue', roomValueInput.value || '');
+
+                if (startDateInput.value) {
+                    params.set('InputStartDateValue', startDateInput.value);
+                    params.set('LookupDate', startDateInput.value);
+                }
+
+                if (endDateInput.value) {
+                    params.set('InputEndDateValue', endDateInput.value);
+                }
+
+                return `${window.location.pathname}?${params.toString()}`;
+            };
+
+            const refreshAvailability = async () => {
+                availabilityChip.textContent = 'Checking availability...';
+
+                try {
+                    const response = await fetch(buildLookupUrl(), {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Lookup failed with status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    renderSectionOptions(data.courseSectionOptions || [], courseSectionSelect.value);
+                    renderRoomOptions(data.roomOptions || [], roomValueInput.value);
+                    renderConflictList(data.busySchedules || []);
+
+                    const availableClassCount = (data.courseSectionOptions || []).filter(option => option.isAvailable).length;
+                    const availableRoomCount = (data.roomOptions || []).filter(option => option.isAvailable).length;
+                    availabilityChip.textContent = `${availableClassCount} class(es), ${availableRoomCount} room(s) available`;
+                    updatePreview();
+                } catch (error) {
+                    console.error(error);
+                    availabilityChip.textContent = 'Availability check failed';
+                }
+            };
+
+            const openCreateEditor = async (button) => {
+                const dayValue = button.dataset.dayValue || '1';
+                const slotValue = button.dataset.slotValue || '1';
+                const semesterStart = boardRoot?.dataset.semesterStart || startDateInput.value;
+                const semesterEnd = boardRoot?.dataset.semesterEnd || endDateInput.value;
+
+                scheduleSlotIdInput.value = '';
+                deleteScheduleSlotIdInput.value = '';
+                deleteButton.hidden = true;
+                titleElement.textContent = 'Create class slot';
+                modeChip.textContent = 'Create';
+                saveButton.textContent = 'Create session';
+
+                daySelect.value = dayValue;
+                slotSelect.value = slotValue;
+                startDateInput.value = alignDateToDay(semesterStart, dayValue);
+                endDateInput.value = semesterEnd;
+                roomValueInput.value = '';
+                roomCustomInput.value = '';
+                roomSelect.value = '__other__';
+
+                await refreshAvailability();
+                editorModal.show();
+            };
+
+            const openEditEditor = async (button) => {
+                scheduleSlotIdInput.value = button.dataset.scheduleSlotId || '';
+                deleteScheduleSlotIdInput.value = button.dataset.scheduleSlotId || '';
+                deleteButton.hidden = !scheduleSlotIdInput.value;
+                titleElement.textContent = 'Edit class slot';
+                modeChip.textContent = 'Edit';
+                saveButton.textContent = 'Save changes';
+
+                courseSectionSelect.value = button.dataset.courseSectionId || '';
+                daySelect.value = button.dataset.dayValue || daySelect.value;
+                slotSelect.value = button.dataset.slotValue || slotSelect.value;
+                roomValueInput.value = button.dataset.room || roomValueInput.value;
+                startDateInput.value = button.dataset.startDate || startDateInput.value;
+                endDateInput.value = button.dataset.endDate || endDateInput.value;
+
+                await refreshAvailability();
+                editorModal.show();
+            };
+
+            createButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    openCreateEditor(button);
+                });
+            });
+
+            editButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    openEditEditor(button);
+                });
+            });
+
+            refreshButton?.addEventListener('click', () => {
+                syncRoomValueFromControls({ persist: true });
+                refreshAvailability();
+            });
+
+            courseSectionSelect?.addEventListener('change', () => {
+                updatePreview();
+                refreshAvailability();
+            });
+
+            daySelect?.addEventListener('change', () => {
+                if (startDateInput.value) {
+                    startDateInput.value = alignDateToDay(startDateInput.value, daySelect.value);
+                }
+
+                updatePreview();
+                refreshAvailability();
+            });
+
+            [slotSelect, startDateInput, endDateInput].forEach(control => {
+                control?.addEventListener('change', () => {
+                    updatePreview();
+                    refreshAvailability();
+                });
+            });
+
+            roomSelect?.addEventListener('change', () => {
+                syncRoomValueFromControls();
+                updatePreview();
+                if (roomSelect.value === '__other__') {
+                    roomCustomInput?.focus();
+                    return;
+                }
+
+                refreshAvailability();
+            });
+
+            roomCustomInput?.addEventListener('input', () => {
+                syncRoomValueFromControls();
+                updatePreview();
+            });
+
+            roomCustomInput?.addEventListener('change', () => {
+                syncRoomValueFromControls({ persist: true });
+                updatePreview();
+                refreshAvailability();
+            });
+
+            formElement?.addEventListener('submit', () => {
+                syncRoomValueFromControls({ persist: true });
+            });
+
+            updatePreview();
+
+            if (shouldOpenEditor) {
+                if (initialEditId) {
+                    const existingButton = document.querySelector(`[data-open-edit="true"][data-schedule-slot-id="${initialEditId}"]`);
+                    if (existingButton) {
+                        openEditEditor(existingButton);
+                    } else {
+                        editorModal.show();
+                        refreshAvailability();
+                    }
+                } else {
+                    editorModal.show();
+                    refreshAvailability();
+                }
+            }
+        })();
+    </script>
+}

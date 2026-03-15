@@ -1,0 +1,104 @@
+@model StudentManagementSystem.Presentation.Models.TimetableViewModel
+
+<div class="timetable-shell">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <div class="text-muted small text-uppercase fw-semibold">Weekly View</div>
+            <div class="fw-semibold">@Model.WeekLabel</div>
+        </div>
+        <div class="text-muted small">
+            @if (Model.DayFilter.HasValue || Model.SessionSlotFilter.HasValue)
+            {
+                <span>Filtered by </span>
+                @if (Model.DayFilter.HasValue)
+                {
+                    <span class="badge bg-secondary-subtle text-secondary me-1">@StudentManagementSystem.Presentation.Models.TimetableViewModel.GetDayLabel((DayOfWeek)Model.DayFilter.Value)</span>
+                }
+                @if (Model.SessionSlotFilter.HasValue)
+                {
+                    <span class="badge bg-secondary-subtle text-secondary">@StudentManagementSystem.Presentation.Models.TimetableViewModel.GetSlotLabel(Model.SessionSlotFilter.Value)</span>
+                }
+            }
+            else
+            {
+                <span>Showing all registered sessions in the selected week.</span>
+            }
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table timetable-grid align-top">
+            <thead>
+                <tr>
+                    <th class="timetable-time-col">Session</th>
+                    @foreach (var day in Model.Days)
+                    {
+                        <th>@StudentManagementSystem.Presentation.Models.TimetableViewModel.GetDayLabel(day)</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sessionSlot in Model.SessionSlots)
+                {
+                    <tr>
+                        <th class="timetable-time-col">
+                            <div class="fw-semibold">@StudentManagementSystem.Presentation.Models.TimetableViewModel.GetSlotLabel(sessionSlot)</div>
+                        </th>
+                        @foreach (var day in Model.Days)
+                        {
+                            var cellSlots = Model.GetCellSlots(day, sessionSlot);
+                            <td class="timetable-cell">
+                                @if (cellSlots.Count == 0)
+                                {
+                                    <div class="timetable-empty">No class</div>
+                                }
+                                else
+                                {
+                                    foreach (var slot in cellSlots)
+                                    {
+                                        <div class="timetable-card">
+                                            <div class="fw-semibold">@slot.CourseSection?.Subject?.SubjectCode</div>
+                                            <div class="small">@slot.CourseSection?.SectionCode - @slot.CourseSection?.SectionName</div>
+                                            <div class="small text-muted">@slot.Room</div>
+                                            <div class="small text-muted">@slot.StartDate.ToString("dd/MM") - @slot.EndDate.ToString("dd/MM")</div>
+                                        </div>
+                                    }
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4">
+        <h2 class="h6 mb-3">Detailed Sessions</h2>
+        @if (!Model.HasVisibleSlots)
+        {
+            <div class="text-muted">No sessions match the current week and time filters.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var slot in Model.VisibleSlots)
+                {
+                    <div class="col-xl-4 col-md-6">
+                        <div class="schedule-detail-card h-100">
+                            <div class="d-flex justify-content-between gap-3">
+                                <div>
+                                    <div class="fw-semibold">@slot.CourseSection?.Subject?.SubjectCode - @slot.CourseSection?.Subject?.SubjectName</div>
+                                    <div class="text-muted small">@slot.CourseSection?.SectionCode - @slot.CourseSection?.SectionName</div>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary">@StudentManagementSystem.Presentation.Models.TimetableViewModel.GetSlotLabel(slot.SessionSlot)</span>
+                            </div>
+                            <div class="small mt-3 text-muted">@StudentManagementSystem.Presentation.Models.TimetableViewModel.GetDayLabel(slot.DayOfWeek)</div>
+                            <div class="small text-muted">Room: @slot.Room</div>
+                            <div class="small text-muted">Range: @slot.StartDate.ToString("dd/MM/yyyy") - @slot.EndDate.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

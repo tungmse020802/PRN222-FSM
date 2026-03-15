@@ -1,0 +1,209 @@
+﻿@using StudentManagementSystem.Shared.Constants
+@using StudentManagementSystem.Presentation.Extensions
+@{
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var enableRealtimeNotifications = isAuthenticated
+        && (User.IsInRole(AppRoles.Student) || User.IsInRole(AppRoles.Lecturer));
+    var notificationPageUrl = User.IsInRole(AppRoles.Student)
+        ? "/Student/Notifications"
+        : User.IsInRole(AppRoles.Lecturer)
+            ? "/Lecturer/Notifications"
+            : string.Empty;
+    var displayName = isAuthenticated ? User.GetDisplayName() : string.Empty;
+    var roleName = isAuthenticated ? User.GetRoleName() : "Guest";
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+    var userInitial = string.IsNullOrWhiteSpace(displayName)
+        ? "G"
+        : displayName.Trim()[0].ToString().ToUpperInvariant();
+    bool IsActive(string prefix) => currentPage.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+    bool IsAnyActive(params string[] prefixes) => prefixes.Any(IsActive);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>@ViewData["Title"] - Student Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/StudentManagementSystem.Presentation.styles.css" asp-append-version="true" />
+</head>
+<body class="@(isAuthenticated ? "has-workspace" : null)"
+      data-live-notifications="@enableRealtimeNotifications.ToString().ToLowerInvariant()"
+      data-notifications-url="@notificationPageUrl">
+    <div class="site-shell">
+        <header class="site-header">
+            <div class="container">
+                <nav class="site-navbar">
+                    <a class="brand-lockup" asp-area="" asp-page="/Index">
+                        <span class="brand-mark">SM</span>
+                        <span class="brand-copy">
+                            <span class="brand-title">Student Management System</span>
+                            <span class="brand-subtitle">Simple academic operations</span>
+                        </span>
+                    </a>
+                    <div class="header-actions">
+                        @if (!isAuthenticated)
+                        {
+                            <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">Home</a>
+                            <a asp-page="/Auth/Login" class="btn btn-primary btn-sm">Sign In</a>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm layout-toggle"
+                                    data-sidebar-toggle
+                                    aria-controls="workspaceSidebar"
+                                    aria-expanded="true">
+                                Menu
+                            </button>
+                            <div class="user-panel">
+                                <div class="user-avatar">@userInitial</div>
+                                <div class="user-meta">
+                                    <div class="user-name">@displayName</div>
+                                    <div class="user-role">@roleName</div>
+                                </div>
+                            </div>
+                            <a asp-page="/Auth/Logout" class="btn btn-outline-dark btn-sm">Logout</a>
+                        }
+                    </div>
+                </nav>
+            </div>
+        </header>
+
+        <div class="container site-main">
+            @if (isAuthenticated)
+            {
+                <div class="workspace-shell">
+                    <aside class="workspace-sidebar" id="workspaceSidebar">
+                        <a asp-page="/Index" class="sidebar-home @(IsActive("/Index") ? "is-active" : null)">Overview</a>
+
+                        @if (User.IsInRole(AppRoles.Admin))
+                        {
+                            <div class="sidebar-group @(IsAnyActive("/Admin/Students", "/Admin/Subjects", "/Admin/Semesters") ? "is-open" : null)" data-sidebar-group="admin-setup">
+                                <button type="button" class="sidebar-group-toggle" data-sidebar-group-toggle aria-expanded="@(IsAnyActive("/Admin/Students", "/Admin/Subjects", "/Admin/Semesters").ToString().ToLowerInvariant())">
+                                    Academic Setup
+                                </button>
+                                <div class="sidebar-tree">
+                                    <a asp-page="/Admin/Students/Index" class="sidebar-link @(IsActive("/Admin/Students") ? "is-active" : null)">Students</a>
+                                    <a asp-page="/Admin/Subjects/Index" class="sidebar-link @(IsActive("/Admin/Subjects") ? "is-active" : null)">Subjects</a>
+                                    <a asp-page="/Admin/Semesters/Index" class="sidebar-link @(IsActive("/Admin/Semesters") ? "is-active" : null)">Semesters</a>
+                                </div>
+                            </div>
+                            <div class="sidebar-group @(IsAnyActive("/Admin/CourseSections", "/Admin/Schedules") ? "is-open" : null)" data-sidebar-group="admin-operations">
+                                <button type="button" class="sidebar-group-toggle" data-sidebar-group-toggle aria-expanded="@(IsAnyActive("/Admin/CourseSections", "/Admin/Schedules").ToString().ToLowerInvariant())">
+                                    Operations
+                                </button>
+                                <div class="sidebar-tree">
+                                    <a asp-page="/Admin/CourseSections/Index" class="sidebar-link @(IsActive("/Admin/CourseSections") ? "is-active" : null)">Course Sections</a>
+                                    <a asp-page="/Admin/Schedules/Index" class="sidebar-link @(IsActive("/Admin/Schedules") ? "is-active" : null)">Schedules</a>
+                                </div>
+                            </div>
+                        }
+
+                        @if (User.IsInRole(AppRoles.Lecturer))
+                        {
+                            <div class="sidebar-group @(IsAnyActive("/Lecturer/Sections", "/Lecturer/Schedule", "/Lecturer/Grades") ? "is-open" : null)" data-sidebar-group="lecturer-teaching">
+                                <button type="button" class="sidebar-group-toggle" data-sidebar-group-toggle aria-expanded="@(IsAnyActive("/Lecturer/Sections", "/Lecturer/Schedule", "/Lecturer/Grades").ToString().ToLowerInvariant())">
+                                    Teaching
+                                </button>
+                                <div class="sidebar-tree">
+                                    <a asp-page="/Lecturer/Sections/Index" class="sidebar-link @(IsActive("/Lecturer/Sections") ? "is-active" : null)">My Sections</a>
+                                    <a asp-page="/Lecturer/Schedule/Index" class="sidebar-link @(IsActive("/Lecturer/Schedule") ? "is-active" : null)">Teaching Schedule</a>
+                                    <a asp-page="/Lecturer/Grades/Index" class="sidebar-link @(IsActive("/Lecturer/Grades") ? "is-active" : null)">Gradebook</a>
+                                </div>
+                            </div>
+                            <div class="sidebar-group @(IsActive("/Lecturer/Notifications") ? "is-open" : null)" data-sidebar-group="lecturer-communication">
+                                <button type="button" class="sidebar-group-toggle" data-sidebar-group-toggle aria-expanded="@(IsActive("/Lecturer/Notifications").ToString().ToLowerInvariant())">
+                                    Communication
+                                </button>
+                                <div class="sidebar-tree">
+                                    <a asp-page="/Lecturer/Notifications/Index" class="sidebar-link @(IsActive("/Lecturer/Notifications") ? "is-active" : null)">Notifications</a>
+                                </div>
+                            </div>
+                        }
+
+                        @if (User.IsInRole(AppRoles.Student))
+                        {
+                            <div class="sidebar-group @(IsAnyActive("/Student/Registration", "/Student/Schedule", "/Student/Grades") ? "is-open" : null)" data-sidebar-group="student-study">
+                                <button type="button" class="sidebar-group-toggle" data-sidebar-group-toggle aria-expanded="@(IsAnyActive("/Student/Registration", "/Student/Schedule", "/Student/Grades").ToString().ToLowerInvariant())">
+                                    Study
+                                </button>
+                                <div class="sidebar-tree">
+                                    <a asp-page="/Student/Registration/Index" class="sidebar-link @(IsActive("/Student/Registration") ? "is-active" : null)">Course Registration</a>
+                                    <a asp-page="/Student/Schedule/Index" class="sidebar-link @(IsActive("/Student/Schedule") ? "is-active" : null)">Timetable</a>
+                                    <a asp-page="/Student/Grades/Index" class="sidebar-link @(IsActive("/Student/Grades") ? "is-active" : null)">Grades</a>
+                                </div>
+                            </div>
+                            <div class="sidebar-group @(IsAnyActive("/Student/Recommendations", "/Student/Notifications", "/Student/Profile") ? "is-open" : null)" data-sidebar-group="student-support">
+                                <button type="button" class="sidebar-group-toggle" data-sidebar-group-toggle aria-expanded="@(IsAnyActive("/Student/Recommendations", "/Student/Notifications", "/Student/Profile").ToString().ToLowerInvariant())">
+                                    Support
+                                </button>
+                                <div class="sidebar-tree">
+                                    <a asp-page="/Student/Recommendations/Index" class="sidebar-link @(IsActive("/Student/Recommendations") ? "is-active" : null)">Study Recommendation</a>
+                                    <a asp-page="/Student/Notifications/Index" class="sidebar-link @(IsActive("/Student/Notifications") ? "is-active" : null)">Notifications</a>
+                                    <a asp-page="/Student/Profile/Index" class="sidebar-link @(IsActive("/Student/Profile") ? "is-active" : null)">Profile</a>
+                                </div>
+                            </div>
+                        }
+                    </aside>
+
+                    <div class="workspace-content">
+                        @if (TempData["StatusMessage"] is string statusMessage)
+                        {
+                            <div class="alert alert-success">@statusMessage</div>
+                        }
+                        @if (TempData["ErrorMessage"] is string errorMessage)
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+                        <main role="main" class="pb-3">
+                            @RenderBody()
+                        </main>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @if (TempData["StatusMessage"] is string statusMessage)
+                {
+                    <div class="alert alert-success">@statusMessage</div>
+                }
+                @if (TempData["ErrorMessage"] is string errorMessage)
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+                <main role="main" class="pb-3">
+                    @RenderBody()
+                </main>
+            }
+        </div>
+
+        <footer class="site-footer">
+            <div class="container">
+                <div class="footer-bottom footer-simple">
+                    <span>&copy; 2026 Student Management System</span>
+                    <span>Admin, Lecturer and Student workspace</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    @if (enableRealtimeNotifications)
+    {
+        <div class="notification-toast-container" id="notificationToastContainer" aria-live="polite" aria-atomic="true"></div>
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/microsoft-signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
